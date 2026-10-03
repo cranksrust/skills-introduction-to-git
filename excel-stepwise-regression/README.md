@@ -15,7 +15,18 @@ Excel for the web and Excel on iPad do not run VBA, so the add-in does not work 
 
 1. Open a blank workbook and press **Alt+F11** (Mac: **Tools > Macro > Visual Basic Editor**).
 2. **File > Import File...** and pick `StepwiseRegression.bas`.
-3. Close the editor, then **File > Save As**, type **Excel Add-in (\*.xlam)**. Excel suggests its AddIns folder.
+3. Double-click **ThisWorkbook** in the Project Explorer and paste:
+   ```vb
+   Private Sub Workbook_Open()
+       Auto_Open
+   End Sub
+
+   Private Sub Workbook_BeforeClose(Cancel As Boolean)
+       Auto_Close
+   End Sub
+   ```
+   This adds the right-click menu item each time Excel loads the add-in.
+4. Close the editor, then **File > Save As**, type **Excel Add-in (\*.xlam)**. Excel suggests its AddIns folder.
 
 ### Load it
 
