@@ -32,6 +32,14 @@ Excel for the web and Excel on iPad do not run VBA, so the add-in does not work 
 
 **File > Options > Add-ins > Manage: Excel Add-ins > Go...**, tick **StepwiseRegression** (use **Browse** if it is not listed). On Mac: **Tools > Excel Add-ins**. Restart Excel once so the right-click menu item appears.
 
+### Add a Ribbon button (recommended)
+
+Newer Excel builds can rebuild the right-click menu after add-ins load, so the menu item may not appear. A Ribbon button always works:
+
+1. **File > Options > Customize Ribbon**.
+2. On the right, select **Data**, click **New Group**, then **Rename** it to `Stepwise`.
+3. On the left, set **Choose commands from** to **Macros**, select **RunStepwiseRegression**, click **Add >>**, then **OK**.
+
 ## Use
 
 ### Interactive report
