@@ -15,7 +15,7 @@ Attribute VB_Name = "StepwiseRegression"
 '   3 = Stepwise              forward step, then backward removals, repeat
 '
 ' Criteria
-'   1 = t Stat (default)      enter when |t| >= enter (2.0), remove when |t| < remove (2.0)
+'   1 = T-Stat (default)      enter when |T-Stat| >= enter (2.0), remove when |T-Stat| < remove (2.0)
 '   2 = P-value               enter when p < enter (0.05), remove when p > remove (0.10)
 '
 ' Both criteria use the partial t-test on the candidate's coefficient (equivalent
@@ -77,7 +77,7 @@ Private Type StepLog
     nSteps As Long
     action() As String
     varName() As String
-    tValue() As Double     ' t Stat of the variable entered or removed
+    tValue() As Double     ' T-Stat of the variable entered or removed
     pValue() As Double     ' -1 when not applicable
     nVars() As Long
     r2() As Double
@@ -176,7 +176,7 @@ Public Sub RunStepwiseRegression()
     End If
 
     v = Application.InputBox("Criterion for entering and removing variables:" & vbLf & _
-        "  1 = t Stat (|t| threshold)" & vbLf & _
+        "  1 = T-Stat" & vbLf & _
         "  2 = P-value", APP_TITLE, CRIT_T, Type:=1)
     If VarType(v) = vbBoolean Then Exit Sub
     crit = CLng(v)
@@ -188,7 +188,7 @@ Public Sub RunStepwiseRegression()
 
     If method <> METHOD_BACKWARD Then
         If crit = CRIT_T Then
-            v = Application.InputBox("|t| to enter (a candidate enters when its |t Stat| is at least this):", _
+            v = Application.InputBox("|T-Stat| to enter (a candidate enters when its |T-Stat| is at least this):", _
                 APP_TITLE, enterVal, Type:=1)
         Else
             v = Application.InputBox("P-value to enter (a candidate enters when its p-value is below this):", _
@@ -199,7 +199,7 @@ Public Sub RunStepwiseRegression()
     End If
     If method <> METHOD_FORWARD Then
         If crit = CRIT_T Then
-            v = Application.InputBox("|t| to remove (a term is dropped when its |t Stat| is below this):", _
+            v = Application.InputBox("|T-Stat| to remove (a term is dropped when its |T-Stat| is below this):", _
                 APP_TITLE, IIf(method = METHOD_STEPWISE, Application.WorksheetFunction.Min(removeVal, enterVal), removeVal), Type:=1)
         Else
             v = Application.InputBox("P-value to remove (a term is dropped when its p-value is above this):", _
@@ -260,10 +260,10 @@ Public Function STEPREG(known_y As Range, known_x As Range, Optional method As L
 
     f = FitCurrent(ds, inModel)
     ReDim outArr(1 To f.p + 2, 1 To 5)
-    outArr(1, 1) = "Term"
-    outArr(1, 2) = "Coefficient"
-    outArr(1, 3) = "Std Error"
-    outArr(1, 4) = "t Stat"
+    outArr(1, 1) = ""
+    outArr(1, 2) = "Coefficients"
+    outArr(1, 3) = "Standard Error"
+    outArr(1, 4) = "T-Stat"
     outArr(1, 5) = "P-value"
     For i = 0 To f.p
         If i = 0 Then outArr(2, 1) = "Intercept" Else outArr(i + 2, 1) = ds.xNames(f.vars(i))
@@ -296,9 +296,9 @@ End Sub
 Private Function CheckThresholds(method As Long, crit As Long, enterVal As Double, removeVal As Double) As String
     If crit = CRIT_T Then
         If enterVal <= 0 Or removeVal <= 0 Then
-            CheckThresholds = "|t| thresholds must be greater than 0."
+            CheckThresholds = "|T-Stat| thresholds must be greater than 0."
         ElseIf method = METHOD_STEPWISE And enterVal < removeVal Then
-            CheckThresholds = "|t| to enter must be at least |t| to remove, otherwise a variable can cycle in and out."
+            CheckThresholds = "|T-Stat| to enter must be at least |T-Stat| to remove, otherwise a variable can cycle in and out."
         End If
     Else
         If enterVal <= 0 Or enterVal >= 1 Or removeVal <= 0 Or removeVal >= 1 Then
@@ -536,7 +536,7 @@ Private Function TryEnter(ds As DataSet, inModel() As Boolean, crit As Long, ent
             If f.ok Then
                 pos = PositionOf(f, j)
                 t = Abs(TStat(f.coef(pos), f.se(pos)))
-                ' Candidates share the same residual df, so the largest |t| has the smallest p-value
+                ' Candidates share the same residual df, so the largest |T-Stat| has the smallest p-value
                 If t > bestT Then
                     bestT = t
                     best = j
@@ -806,9 +806,9 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     PutPair ws, r, "Dependent variable", ds.yName
     PutPair ws, r, "Method", methodName
     If crit = CRIT_T Then
-        PutPair ws, r, "Criterion", "t Stat"
-        If method <> METHOD_BACKWARD Then PutPair ws, r, "|t| to enter", enterVal, "0.00"
-        If method <> METHOD_FORWARD Then PutPair ws, r, "|t| to remove", removeVal, "0.00"
+        PutPair ws, r, "Criterion", "T-Stat"
+        If method <> METHOD_BACKWARD Then PutPair ws, r, "|T-Stat| to enter", enterVal, "0.00"
+        If method <> METHOD_FORWARD Then PutPair ws, r, "|T-Stat| to remove", removeVal, "0.00"
     Else
         PutPair ws, r, "Criterion", "P-value"
         If method <> METHOD_BACKWARD Then PutPair ws, r, "P-value to enter", enterVal, "0.00"
@@ -826,7 +826,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     ' Step history
     r = r + 1
     PutSection ws, r, "Selection steps"
-    PutHeader ws, r, Array("Step", "Action", "Variable", "t Stat", "P-value", "Terms in model", _
+    PutHeader ws, r, Array("Step", "Action", "Variable", "T-Stat", "P-value", "Terms in model", _
         "R Square", "Adjusted R Square", "RMSE", "AIC", "BIC")
     top = r
     For i = 1 To sl.nSteps
@@ -850,6 +850,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     ' Final model summary
     r = r + 1
     PutSection ws, r, "Final model"
+    PutHeader ws, r, Array("Regression Statistics", "")
     PutPair ws, r, "Multiple R", Sqr(Application.WorksheetFunction.Max(0, 1 - f.sse / ds.syy)), FMT_R2
     PutPair ws, r, "R Square", 1 - f.sse / ds.syy, FMT_R2
     PutPair ws, r, "Adjusted R Square", 1 - (f.sse / f.dfe) / (ds.syy / (ds.n - 1)), FMT_R2
@@ -858,7 +859,8 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
 
     ' ANOVA
     r = r + 1
-    PutHeader ws, r, Array("ANOVA", "df", "SS", "MS", "F", "Significance F")
+    PutSection ws, r, "ANOVA"
+    PutHeader ws, r, Array("", "df", "SS", "MS", "F", "Significance F")
     top = r
     ws.Cells(r, 1).Value = "Regression"
     ws.Cells(r, 2).Value = f.p
@@ -885,7 +887,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     r = r + 2
 
     ' Coefficients
-    PutHeader ws, r, Array("Term", "Coefficients", "Standard Error", "t Stat", "P-value", _
+    PutHeader ws, r, Array("", "Coefficients", "Standard Error", "T-Stat", "P-value", _
         "Lower 95%", "Upper 95%")
     top = r
     For i = 0 To f.p
@@ -907,7 +909,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     If hasExcluded Then
         r = r + 1
         PutSection ws, r, "Variables not in the final model"
-        PutHeader ws, r, Array("Variable", "t Stat if added", "P-value if added", "Note")
+        PutHeader ws, r, Array("Variable", "T-Stat if added", "P-value if added", "Note")
         top = r
         For j = 1 To ds.k
             If Not inModel(j) Then

@@ -52,14 +52,14 @@ Right-click any cell and choose **Stepwise Regression...** (or **Alt+F8**, type 
 | X range | Candidate predictors. Ctrl+click to pick non-adjacent columns. Each must cover the same rows as Y. |
 | Labels | Whether the first row is headers. |
 | Method | 1 Forward, 2 Backward, 3 Stepwise. |
-| Criterion | 1 t Stat (default), 2 P-value. |
-| Enter / remove thresholds | t Stat: enter when \|t\| >= 2.0, remove when \|t\| < 2.0. P-value: enter when p < 0.05, remove when p > 0.10. Stepwise requires \|t\| to enter >= \|t\| to remove (or p to enter <= p to remove). |
+| Criterion | 1 T-Stat (default), 2 P-value. |
+| Enter / remove thresholds | T-Stat: enter when \|T-Stat\| >= 2.0, remove when \|T-Stat\| < 2.0. P-value: enter when p < 0.05, remove when p > 0.10. Stepwise requires \|T-Stat\| to enter >= \|T-Stat\| to remove (or p to enter <= p to remove). |
 
 The report goes on a new sheet named `Stepwise` in the data's workbook, styled in burnt orange (#BF5700), with a small HOUMBA Class of '28 credit in the footer. See `examples/report_preview.png`.
 
-- **Selection steps:** each entry or removal with its t Stat and p-value, plus R², adjusted R², RMSE, AIC and BIC after the step.
-- **Final model:** R, R², adjusted R², RMSE, ANOVA, and coefficients with standard errors, t, p and 95% intervals.
-- **Variables not in the final model:** the t Stat and p-value each would have if entered next, or a note when it is constant or collinear.
+- **Selection steps:** each entry or removal with its T-Stat and p-value, plus R², adjusted R², RMSE, AIC and BIC after the step.
+- **Final model:** the same Regression Statistics, ANOVA and coefficient tables as Excel's Data Analysis > Regression report, with Standard Error shown as RMSE.
+- **Variables not in the final model:** the T-Stat and p-value each would have if entered next, or a note when it is constant or collinear.
 
 ### Worksheet function
 
@@ -67,15 +67,15 @@ The report goes on a new sheet named `Stepwise` in the data's workbook, styled i
 =STEPREG(known_y, known_x, [method], [criterion], [enter_threshold], [remove_threshold], [has_labels])
 ```
 
-`method` 1/2/3 (default 3), `criterion` 1 t Stat (default) or 2 P-value. Thresholds default to 2.0/2.0 for t Stat and 0.05/0.10 for P-value. Example: `=STEPREG(A4:A48, B4:F48, 3, 1, 2, 2, TRUE)`.
+`method` 1/2/3 (default 3), `criterion` 1 T-Stat (default) or 2 P-value. Thresholds default to 2.0/2.0 for T-Stat and 0.05/0.10 for P-value. Example: `=STEPREG(A4:A48, B4:F48, 3, 1, 2, 2, TRUE)`.
 
-Returns the final coefficient table (Term, Coefficient, Std Error, t Stat, P-value). It spills in Excel 365. In older versions select a block 5 columns wide and enough rows, type the formula and press **Ctrl+Shift+Enter**. `known_x` must be one contiguous block. Returns `#VALUE!` on bad input.
+Returns the final coefficient table (term name, Coefficients, Standard Error, T-Stat, P-value). It spills in Excel 365. In older versions select a block 5 columns wide and enough rows, type the formula and press **Ctrl+Shift+Enter**. `known_x` must be one contiguous block. Returns `#VALUE!` on bad input.
 
 ## Method
 
-- Entry and removal use the partial t-test on the candidate's coefficient, which is equivalent to the partial F-test. The t Stat criterion compares \|t\| with a fixed cutoff, the P-value criterion compares the two-tailed p-value.
-- Forward: start with the intercept only, add the candidate with the largest \|t\| while it qualifies.
-- Backward: start with every candidate, drop the term with the smallest \|t\| while it fails the remove threshold.
+- Entry and removal use the partial t-test on the candidate's coefficient, which is equivalent to the partial F-test. The T-Stat criterion compares \|T-Stat\| with a fixed cutoff, the P-value criterion compares the two-tailed p-value.
+- Forward: start with the intercept only, add the candidate with the largest \|T-Stat\| while it qualifies.
+- Backward: start with every candidate, drop the term with the smallest \|T-Stat\| while it fails the remove threshold.
 - Stepwise: one forward step, then backward removals until none qualify, repeated until nothing changes. A 1000-iteration cap guards against cycling and is flagged in the report.
 - Rows where Y or any X is blank, text or an error are excluded. The report states how many.
 - Least squares is solved on mean-centred cross products. Candidates that are constant or collinear with terms already in the model (1 - R² below 1e-10) are skipped.
@@ -90,7 +90,7 @@ On the `Reg - 5 preds` sheet of `Hoyda_Discrimination.xlsx`, Y = `A4:A48`, X = `
 | 2 | ROW4 enters (t = -3.63) | SEX removed (t = -0.66) |
 | 3 | SENIORITY2 enters (t = -2.27) | |
 
-| Term | Coefficient | Std Error | t Stat | P-value |
+| | Coefficients | Standard Error | T-Stat | P-value |
 |---|---|---|---|---|
 | Intercept | 576.851 | 20.349 | 28.35 | 4.2e-28 |
 | SENIORITY | 18.367 | 4.523 | 4.06 | 0.00022 |

@@ -1,5 +1,5 @@
 """Writes examples/Stepwise_Example_Output.xlsx: the add-in's report, styling
-included, for forward, backward and stepwise runs (t Stat criterion) on the
+included, for forward, backward and stepwise runs (T-Stat criterion) on the
 Hoyda data. Mirrors WriteReport in StepwiseRegression.bas.
 
 Usage: python make_example.py path/to/Hoyda_Discrimination.xlsx output.xlsx
@@ -72,11 +72,11 @@ def write_report(wb, ds, method, mname, sname):
     section("Settings")
     pair("Dependent variable", "SALARY")
     pair("Method", mname)
-    pair("Criterion", "t Stat")
+    pair("Criterion", "T-Stat")
     if method != 2:
-        pair("|t| to enter", 2, "0.00")
+        pair("|T-Stat| to enter", 2, "0.00")
     if method != 1:
-        pair("|t| to remove", 2, "0.00")
+        pair("|T-Stat| to remove", 2, "0.00")
     pair("Observations used", ds.n, "0")
     pair("Rows excluded (blank or non-numeric)", 0, "0")
     pair("Y range", "'[Hoyda Discrimination.xlsx]Reg - 5 preds'!$A$4:$A$48")
@@ -85,7 +85,7 @@ def write_report(wb, ds, method, mname, sname):
 
     section("Selection steps")
     fm = ["@", "@", "@", FMT_T, FMT_P, "0", FMT_R2, FMT_R2, FMT_NUM, FMT_NUM, FMT_NUM]
-    header(["Step", "Action", "Variable", "t Stat", "P-value", "Terms in model", "R Square",
+    header(["Step", "Action", "Variable", "T-Stat", "P-value", "Terms in model", "R Square",
             "Adjusted R Square", "RMSE", "AIC", "BIC"], fm)
     for i, (act, name, tv, pv, f) in enumerate(log):
         p, sse = len(f["vars"]), f["sse"]
@@ -98,6 +98,7 @@ def write_report(wb, ds, method, mname, sname):
     ssr = ds.syy - sse
     r[0] += 1
     section("Final model")
+    header(["Regression Statistics", ""], ["@", "@"])
     pair("Multiple R", math.sqrt(1 - sse / ds.syy), FMT_R2)
     pair("R Square", 1 - sse / ds.syy, FMT_R2)
     pair("Adjusted R Square", 1 - (sse / dfe) / (ds.syy / (ds.n - 1)), FMT_R2)
@@ -106,7 +107,8 @@ def write_report(wb, ds, method, mname, sname):
     r[0] += 1
 
     fm = ["@", "0", FMT_NUM, FMT_NUM, FMT_NUM, FMT_P]
-    header(["ANOVA", "df", "SS", "MS", "F", "Significance F"], fm)
+    section("ANOVA")
+    header(["", "df", "SS", "MS", "F", "Significance F"], fm)
     fs = (ssr / p) / (sse / dfe)
     row(["Regression", p, ssr, ssr / p, fs, stats.f.sf(fs, p, dfe)], fm)
     row(["Residual", dfe, sse, sse / dfe, None, None], fm)
@@ -116,7 +118,7 @@ def write_report(wb, ds, method, mname, sname):
     r[0] += 1
 
     fm = ["@", FMT_COEF, FMT_COEF, FMT_T, FMT_P, FMT_COEF, FMT_COEF]
-    header(["Term", "Coefficients", "Standard Error", "t Stat", "P-value", "Lower 95%", "Upper 95%"], fm)
+    header(["", "Coefficients", "Standard Error", "T-Stat", "P-value", "Lower 95%", "Upper 95%"], fm)
     tc = stats.t.ppf(0.975, dfe)
     for i, nm in enumerate(["Intercept"] + [ds.names[j] for j in f["vars"]]):
         b, s = f["coef"][i], f["se"][i]
@@ -125,7 +127,7 @@ def write_report(wb, ds, method, mname, sname):
 
     section("Variables not in the final model")
     fm = ["@", FMT_T, FMT_P, "@"]
-    header(["Variable", "t Stat if added", "P-value if added", "Note"], fm)
+    header(["Variable", "T-Stat if added", "P-value if added", "Note"], fm)
     for j in range(ds.k):
         if not inm[j]:
             inm[j] = True
