@@ -24,7 +24,20 @@ Attribute VB_Name = "StepwiseRegression"
 '==============================================================================
 Option Explicit
 
-Private Const APP_TITLE As String = "Stepwise Regression"
+Private Const APP_TITLE As String = "Stepwise Regression | HOUMBA '28"
+Private Const CREDIT As String = "Built for the HOUMBA Class of '28"
+
+' Report colours (Long values of RGB(r, g, b); Const cannot call RGB)
+Private Const BURNT_ORANGE As Long = 22463      ' RGB(191, 87, 0)  #BF5700
+Private Const ORANGE_TINT As Long = 14083576    ' RGB(248, 229, 214)
+Private Const GREY_TEXT As Long = 5855577       ' RGB(89, 89, 89)
+
+' Report number formats
+Private Const FMT_P As String = "[<0.0001]""<0.0001"";0.0000"
+Private Const FMT_T As String = "0.00"
+Private Const FMT_R2 As String = "0.0000"
+Private Const FMT_NUM As String = "#,##0.00"
+Private Const FMT_COEF As String = "#,##0.0000"
 Private Const MENU_TAG As String = "StepwiseRegressionAddin"
 Private Const SING_TOL As Double = 1E-10
 Private Const MAX_STEPS As Long = 1000
@@ -758,7 +771,7 @@ End Function
 Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As Double, removeVal As Double, _
         inModel() As Boolean, sl As StepLog, dropped As Long, yRng As Range, xRng As Range)
     Dim wb As Workbook, ws As Worksheet, f As FitResult
-    Dim r As Long, i As Long, j As Long, tCrit As Double, ssr As Double
+    Dim r As Long, i As Long, j As Long, tCrit As Double, ssr As Double, top As Long
     Dim fStat As Double, methodName As String, hasExcluded As Boolean
     Dim trial As FitResult, pos As Long
 
@@ -771,29 +784,45 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     Set wb = yRng.Worksheet.Parent
     Set ws = wb.Worksheets.Add(After:=wb.Sheets(wb.Sheets.Count))
     ws.Name = UniqueSheetName(wb, "Stepwise")
+    ws.Cells.Font.Name = "Calibri"
+    ws.Cells.Font.Size = 10
 
     f = FitCurrent(ds, inModel)
     ssr = ds.syy - f.sse
     tCrit = Application.WorksheetFunction.TInv(0.05, f.dfe)
 
-    r = 1
-    ws.Cells(r, 1).Value = "Stepwise Regression Output"
-    ws.Cells(r, 1).Font.Bold = True
-    ws.Cells(r, 1).Font.Size = 14
-    r = r + 2
+    ' Title bar and credit
+    With ws.Range("A1:K1")
+        .Interior.Color = BURNT_ORANGE
+        .Font.Color = vbWhite
+        .Font.Bold = True
+        .Font.Size = 14
+        .VerticalAlignment = xlCenter
+    End With
+    ws.Rows(1).RowHeight = 26
+    ws.Cells(1, 1).Value = "  Stepwise Regression Output"
+    With ws.Cells(2, 1)
+        .Value = "  " & CREDIT
+        .Font.Italic = True
+        .Font.Size = 9
+        .Font.Color = BURNT_ORANGE
+    End With
+
+    r = 4
+    PutSection ws, r, "Settings"
     PutPair ws, r, "Dependent variable", ds.yName
     PutPair ws, r, "Method", methodName
     If crit = CRIT_T Then
         PutPair ws, r, "Criterion", "t Stat"
-        If method <> METHOD_BACKWARD Then PutPair ws, r, "|t| to enter", enterVal
-        If method <> METHOD_FORWARD Then PutPair ws, r, "|t| to remove", removeVal
+        If method <> METHOD_BACKWARD Then PutPair ws, r, "|t| to enter", enterVal, "0.00"
+        If method <> METHOD_FORWARD Then PutPair ws, r, "|t| to remove", removeVal, "0.00"
     Else
         PutPair ws, r, "Criterion", "P-value"
-        If method <> METHOD_BACKWARD Then PutPair ws, r, "P-value to enter", enterVal
-        If method <> METHOD_FORWARD Then PutPair ws, r, "P-value to remove", removeVal
+        If method <> METHOD_BACKWARD Then PutPair ws, r, "P-value to enter", enterVal, "0.00"
+        If method <> METHOD_FORWARD Then PutPair ws, r, "P-value to remove", removeVal, "0.00"
     End If
-    PutPair ws, r, "Observations used", ds.n
-    PutPair ws, r, "Rows excluded (blank or non-numeric)", dropped
+    PutPair ws, r, "Observations used", ds.n, "0"
+    PutPair ws, r, "Rows excluded (blank or non-numeric)", dropped, "0"
     PutPair ws, r, "Y range", yRng.Address(External:=True)
     PutPair ws, r, "X range", xRng.Address(External:=True)
     If sl.hitLimit Then
@@ -803,8 +832,10 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
 
     ' Step history
     r = r + 1
+    PutSection ws, r, "Selection steps"
     PutHeader ws, r, Array("Step", "Action", "Variable", "t Stat", "P-value", "Terms in model", _
-        "R Square", "Adjusted R Square", "RMSE", "AIC", "BIC"), "Selection steps"
+        "R Square", "Adjusted R Square", "RMSE", "AIC", "BIC")
+    top = r
     For i = 1 To sl.nSteps
         ws.Cells(r, 1).Value = i - 1
         ws.Cells(r, 2).Value = sl.action(i)
@@ -821,19 +852,21 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
         ws.Cells(r, 11).Value = sl.bic(i)
         r = r + 1
     Next i
+    SetFormats ws, top, r - 1, Array("@", "@", "@", FMT_T, FMT_P, "0", FMT_R2, FMT_R2, FMT_NUM, FMT_NUM, FMT_NUM)
 
     ' Final model summary
     r = r + 1
-    PutHeader ws, r, Array("Regression Statistics", ""), "Final model"
-    PutPair ws, r, "Multiple R", Sqr(Application.WorksheetFunction.Max(0, 1 - f.sse / ds.syy))
-    PutPair ws, r, "R Square", 1 - f.sse / ds.syy
-    PutPair ws, r, "Adjusted R Square", 1 - (f.sse / f.dfe) / (ds.syy / (ds.n - 1))
-    PutPair ws, r, "RMSE", Sqr(f.sse / f.dfe)
-    PutPair ws, r, "Observations", ds.n
+    PutSection ws, r, "Final model"
+    PutPair ws, r, "Multiple R", Sqr(Application.WorksheetFunction.Max(0, 1 - f.sse / ds.syy)), FMT_R2
+    PutPair ws, r, "R Square", 1 - f.sse / ds.syy, FMT_R2
+    PutPair ws, r, "Adjusted R Square", 1 - (f.sse / f.dfe) / (ds.syy / (ds.n - 1)), FMT_R2
+    PutPair ws, r, "RMSE", Sqr(f.sse / f.dfe), FMT_NUM
+    PutPair ws, r, "Observations", ds.n, "0"
 
     ' ANOVA
     r = r + 1
-    PutHeader ws, r, Array("ANOVA", "df", "SS", "MS", "F", "Significance F"), ""
+    PutHeader ws, r, Array("ANOVA", "df", "SS", "MS", "F", "Significance F")
+    top = r
     ws.Cells(r, 1).Value = "Regression"
     ws.Cells(r, 2).Value = f.p
     ws.Cells(r, 3).Value = ssr
@@ -854,11 +887,14 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     ws.Cells(r, 1).Value = "Total"
     ws.Cells(r, 2).Value = ds.n - 1
     ws.Cells(r, 3).Value = ds.syy
+    ws.Range(ws.Cells(r, 1), ws.Cells(r, 6)).Borders(xlEdgeTop).Color = RGB(191, 191, 191)
+    SetFormats ws, top, r, Array("@", "0", FMT_NUM, FMT_NUM, FMT_NUM, FMT_P)
     r = r + 2
 
     ' Coefficients
     PutHeader ws, r, Array("Term", "Coefficients", "Standard Error", "t Stat", "P-value", _
-        "Lower 95%", "Upper 95%"), ""
+        "Lower 95%", "Upper 95%")
+    top = r
     For i = 0 To f.p
         If i = 0 Then ws.Cells(r, 1).Value = "Intercept" Else ws.Cells(r, 1).Value = ds.xNames(f.vars(i))
         ws.Cells(r, 2).Value = f.coef(i)
@@ -869,6 +905,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
         ws.Cells(r, 7).Value = f.coef(i) + tCrit * f.se(i)
         r = r + 1
     Next i
+    SetFormats ws, top, r - 1, Array("@", FMT_COEF, FMT_COEF, FMT_T, FMT_P, FMT_COEF, FMT_COEF)
 
     ' Variables left out
     For j = 1 To ds.k
@@ -876,8 +913,9 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     Next j
     If hasExcluded Then
         r = r + 1
-        PutHeader ws, r, Array("Variable", "t Stat if entered next", "P-value if entered next", "Note"), _
-            "Variables not in the final model"
+        PutSection ws, r, "Variables not in the final model"
+        PutHeader ws, r, Array("Variable", "t Stat if added", "P-value if added", "Note")
+        top = r
         For j = 1 To ds.k
             If Not inModel(j) Then
                 ws.Cells(r, 1).Value = ds.xNames(j)
@@ -896,36 +934,83 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
                 r = r + 1
             End If
         Next j
+        SetFormats ws, top, r - 1, Array("@", FMT_T, FMT_P, "@")
     End If
 
-    ws.Columns("A:K").AutoFit
-    ws.Columns("B").ColumnWidth = Application.WorksheetFunction.Max(ws.Columns("B").ColumnWidth, 14)
+    ' Footer
+    r = r + 1
+    With ws.Range(ws.Cells(r, 1), ws.Cells(r, 11))
+        .Borders(xlEdgeTop).Color = BURNT_ORANGE
+        .Borders(xlEdgeTop).Weight = xlThin
+    End With
+    With ws.Cells(r, 1)
+        .Value = "Stepwise Regression add-in  |  " & CREDIT
+        .Font.Italic = True
+        .Font.Size = 8
+        .Font.Color = GREY_TEXT
+    End With
+
+    ' Fixed widths so the long range addresses overflow instead of widening column B
+    ws.Columns("A").ColumnWidth = 32
+    ws.Columns("B").ColumnWidth = 13
+    ws.Columns("D:K").ColumnWidth = 12
+    ws.Columns("C").AutoFit
+    If ws.Columns("C").ColumnWidth < 16 Then ws.Columns("C").ColumnWidth = 16
     ws.Activate
+    ActiveWindow.DisplayGridlines = False
     ws.Range("A1").Select
 End Sub
 
-Private Sub PutPair(ws As Worksheet, r As Long, label As String, v As Variant)
+Private Sub PutSection(ws As Worksheet, r As Long, title As String)
+    With ws.Cells(r, 1)
+        .Value = title
+        .Font.Bold = True
+        .Font.Size = 11
+        .Font.Color = BURNT_ORANGE
+    End With
+    r = r + 1
+End Sub
+
+Private Sub PutPair(ws As Worksheet, r As Long, label As String, v As Variant, _
+        Optional numFmt As String = "")
     ws.Cells(r, 1).Value = label
+    ws.Cells(r, 1).Font.Color = GREY_TEXT
     ws.Cells(r, 2).Value = v
+    If Len(numFmt) > 0 Then ws.Cells(r, 2).NumberFormat = numFmt
     ws.Cells(r, 2).HorizontalAlignment = xlLeft
     r = r + 1
 End Sub
 
-Private Sub PutHeader(ws As Worksheet, r As Long, headers As Variant, title As String)
-    Dim c As Long
-    If Len(title) > 0 Then
-        ws.Cells(r, 1).Value = title
-        ws.Cells(r, 1).Font.Bold = True
-        r = r + 1
-    End If
-    For c = LBound(headers) To UBound(headers)
-        ws.Cells(r, c - LBound(headers) + 1).Value = headers(c)
+Private Sub PutHeader(ws As Worksheet, r As Long, headers As Variant)
+    Dim c As Long, n As Long
+    n = UBound(headers) - LBound(headers) + 1
+    For c = 1 To n
+        ws.Cells(r, c).Value = headers(LBound(headers) + c - 1)
     Next c
-    With ws.Range(ws.Cells(r, 1), ws.Cells(r, UBound(headers) - LBound(headers) + 1))
-        .Font.Italic = True
-        .Borders(xlEdgeBottom).LineStyle = xlContinuous
+    With ws.Range(ws.Cells(r, 1), ws.Cells(r, n))
+        .Font.Bold = True
+        .Interior.Color = ORANGE_TINT
+        .Borders(xlEdgeBottom).Color = BURNT_ORANGE
+        .Borders(xlEdgeBottom).Weight = xlMedium
+        .WrapText = True
+        .VerticalAlignment = xlBottom
     End With
     r = r + 1
+End Sub
+
+' Applies one number format per column to rows r1..r2 and aligns the header row
+' above to match. "@" marks a column to left-align (text, or the step number).
+Private Sub SetFormats(ws As Worksheet, r1 As Long, r2 As Long, fmts As Variant)
+    Dim c As Long, col As Long
+    For c = LBound(fmts) To UBound(fmts)
+        col = c - LBound(fmts) + 1
+        If fmts(c) = "@" Then
+            ws.Range(ws.Cells(r1 - 1, col), ws.Cells(Application.WorksheetFunction.Max(r1, r2), col)).HorizontalAlignment = xlLeft
+        Else
+            ws.Cells(r1 - 1, col).HorizontalAlignment = xlRight
+            If r2 >= r1 Then ws.Range(ws.Cells(r1, col), ws.Cells(r2, col)).NumberFormat = fmts(c)
+        End If
+    Next c
 End Sub
 
 Private Function UniqueSheetName(wb As Workbook, base As String) As String
