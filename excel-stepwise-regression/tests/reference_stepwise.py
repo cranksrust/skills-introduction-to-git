@@ -84,9 +84,26 @@ def current(ds, inm):
     return fit(ds, [j for j in range(ds.k) if inm[j]])
 
 
-def run(ds, method, p_enter=0.05, p_remove=0.10):
+CRIT_T, CRIT_P = 1, 2
+
+
+def defaults(crit):
+    return (2.0, 2.0) if crit == CRIT_T else (0.05, 0.10)
+
+
+def run(ds, method, crit=CRIT_T, enter=None, remove=None):
+    d_enter, d_remove = defaults(crit)
+    enter = d_enter if enter is None else enter
+    remove = d_remove if remove is None else remove
+
+    def enter_ok(t, pv):
+        return t >= enter if crit == CRIT_T else pv < enter
+
+    def remove_ok(t, pv):
+        return t < remove if crit == CRIT_T else pv > remove
+
     inm = [method == 2] * ds.k
-    log = [("Start", "", None, current(ds, inm))]
+    log = [("Start", "", None, None, current(ds, inm))]
 
     def try_enter():
         best, best_t, best_fit = None, -1, None
@@ -104,9 +121,9 @@ def run(ds, method, p_enter=0.05, p_remove=0.10):
             return False
         pos = best_fit["vars"].index(best) + 1
         pv = pval(best_fit["coef"][pos], best_fit["se"][pos], best_fit["dfe"])
-        if pv < p_enter:
+        if enter_ok(best_t, pv):
             inm[best] = True
-            log.append(("Entered", ds.names[best], pv, best_fit))
+            log.append(("Entered", ds.names[best], tstat(best_fit["coef"][pos], best_fit["se"][pos]), pv, best_fit))
             return True
         return False
 
@@ -117,9 +134,9 @@ def run(ds, method, p_enter=0.05, p_remove=0.10):
         ts = [abs(tstat(f["coef"][i], f["se"][i])) for i in range(1, len(f["vars"]) + 1)]
         w = ts.index(min(ts)) + 1
         pv = pval(f["coef"][w], f["se"][w], f["dfe"])
-        if pv > p_remove:
+        if remove_ok(ts[w - 1], pv):
             inm[f["vars"][w - 1]] = False
-            log.append(("Removed", ds.names[f["vars"][w - 1]], pv, current(ds, inm)))
+            log.append(("Removed", ds.names[f["vars"][w - 1]], tstat(f["coef"][w], f["se"][w]), pv, current(ds, inm)))
             return True
         return False
 
@@ -141,9 +158,10 @@ def run(ds, method, p_enter=0.05, p_remove=0.10):
 
 
 def describe(ds, inm, log):
-    for i, (act, name, pv, f) in enumerate(log):
+    for i, (act, name, tv, pv, f) in enumerate(log):
         r2 = 1 - f["sse"] / ds.syy
-        print(f"  step {i}: {act:8s} {name:12s} p={'' if pv is None else f'{pv:.6g}':12s} "
+        print(f"  step {i}: {act:8s} {name:12s} t={'' if tv is None else f'{tv:.4f}':9s} "
+              f"p={'' if pv is None else f'{pv:.6g}':12s} "
               f"terms={len(f['vars'])} R2={r2:.6f}")
     f = current(ds, inm)
     print("  final:", ["Intercept"] + [ds.names[j] for j in f["vars"]])
@@ -170,7 +188,8 @@ def load(path, sheet, ycol, xcols, first, last):
 
 if __name__ == "__main__":
     ds = load(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], int(sys.argv[5]), int(sys.argv[6]))
-    for m, name in [(1, "Forward"), (2, "Backward"), (3, "Stepwise")]:
-        print(name)
-        inm, log = run(ds, m)
-        describe(ds, inm, log)
+    for crit, cname in [(CRIT_T, "t Stat"), (CRIT_P, "P-value")]:
+        for m, name in [(1, "Forward"), (2, "Backward"), (3, "Stepwise")]:
+            print(f"{name}, criterion {cname}")
+            inm, log = run(ds, m, crit)
+            describe(ds, inm, log)

@@ -32,10 +32,11 @@ def test_hoyda_full_model_matches_workbook():
 
 
 @pytest.mark.skipif(not HOYDA, reason="set HOYDA_XLSX")
+@pytest.mark.parametrize("crit", [ref.CRIT_T, ref.CRIT_P])
 @pytest.mark.parametrize("method", [1, 2, 3])
-def test_hoyda_selection(method):
+def test_hoyda_selection(method, crit):
     ds = ref.load(HOYDA, "Reg - 5 preds", "A", "B:F", 4, 48)
-    inm, log = ref.run(ds, method)
+    inm, log = ref.run(ds, method, crit)
     chosen = [ds.names[j] for j in range(ds.k) if inm[j]]
     assert chosen == ["SENIORITY", "SENIORITY2", "ROW4"]
     f = ref.current(ds, inm)
@@ -52,7 +53,7 @@ def synthetic(seed, n=80, k=8):
     return ref.DataSet(list(y), X.tolist(), [f"x{j}" for j in range(k)])
 
 
-def brute_forward(ds, p_enter):
+def brute_forward(ds, p_enter=None, t_enter=None):
     """Independent forward selection with statsmodels."""
     chosen = []
     while True:
@@ -66,18 +67,25 @@ def brute_forward(ds, p_enter):
                 continue
             res = ols(ds, cols)
             pv = res.pvalues[cols.index(j) + 1]
+            t = abs(res.tvalues[cols.index(j) + 1])
             if best is None or pv < best[1]:
-                best = (j, pv)
-        if best is None or best[1] >= p_enter:
+                best = (j, pv, t)
+        if best is None:
+            return sorted(chosen)
+        if p_enter is not None and best[1] >= p_enter:
+            return sorted(chosen)
+        if t_enter is not None and best[2] < t_enter:
             return sorted(chosen)
         chosen.append(best[0])
 
 
+@pytest.mark.parametrize("crit", [ref.CRIT_T, ref.CRIT_P])
 @pytest.mark.parametrize("seed", range(10))
-def test_forward_matches_statsmodels(seed):
+def test_forward_matches_statsmodels(seed, crit):
     ds = synthetic(seed)
-    inm, _ = ref.run(ds, 1)
-    assert [j for j in range(ds.k) if inm[j]] == brute_forward(ds, 0.05)
+    inm, _ = ref.run(ds, 1, crit)
+    expected = brute_forward(ds, t_enter=2.0) if crit == ref.CRIT_T else brute_forward(ds, p_enter=0.05)
+    assert [j for j in range(ds.k) if inm[j]] == expected
     f = ref.current(ds, inm)
     res = ols(ds, f["vars"])
     assert np.allclose(f["coef"], res.params, rtol=1e-8)

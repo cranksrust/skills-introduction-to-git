@@ -5,16 +5,21 @@ Attribute VB_Name = "StepwiseRegression"
 ' Entry points
 '   RunStepwiseRegression   Interactive macro. Also on the right-click cell menu
 '                           when the add-in is loaded.
-'   =STEPREG(known_y, known_x, [method], [p_enter], [p_remove], [has_labels])
+'   =STEPREG(known_y, known_x, [method], [criterion], [enter_threshold], [remove_threshold], [has_labels])
 '                           Worksheet function returning the final coefficient
 '                           table (spills in Excel 365, array-enter elsewhere).
 '
 ' Methods
-'   1 = Forward selection     start empty, add the best candidate while p < p_enter
-'   2 = Backward elimination  start full, drop the weakest term while p > p_remove
+'   1 = Forward selection     start empty, add the best candidate while it qualifies
+'   2 = Backward elimination  start full, drop the weakest term while it fails
 '   3 = Stepwise              forward step, then backward removals, repeat
 '
-' Entry and removal use the partial t-test (equivalent to the partial F-test).
+' Criteria
+'   1 = t Stat (default)      enter when |t| >= enter (2.0), remove when |t| < remove (2.0)
+'   2 = P-value               enter when p < enter (0.05), remove when p > remove (0.10)
+'
+' Both criteria use the partial t-test on the candidate's coefficient (equivalent
+' to the partial F-test), and the report shows t and p for every step.
 ' Rows where Y or any X is blank or non-numeric are excluded (listwise).
 '==============================================================================
 Option Explicit
@@ -27,6 +32,9 @@ Private Const MAX_STEPS As Long = 1000
 Private Const METHOD_FORWARD As Long = 1
 Private Const METHOD_BACKWARD As Long = 2
 Private Const METHOD_STEPWISE As Long = 3
+
+Private Const CRIT_T As Long = 1
+Private Const CRIT_P As Long = 2
 
 Private Type DataSet
     n As Long
@@ -56,6 +64,7 @@ Private Type StepLog
     nSteps As Long
     action() As String
     varName() As String
+    tValue() As Double     ' t Stat of the variable entered or removed
     pValue() As Double     ' -1 when not applicable
     nVars() As Long
     r2() As Double
@@ -103,7 +112,7 @@ End Sub
 Public Sub RunStepwiseRegression()
     Dim yRng As Range, xRng As Range, a As Range
     Dim v As Variant, hasLabels As Boolean, method As Long
-    Dim pEnter As Double, pRemove As Double
+    Dim crit As Long, enterVal As Double, removeVal As Double
     Dim ds As DataSet, inModel() As Boolean, sl As StepLog
     Dim dropped As Long, msg As String
 
@@ -153,31 +162,42 @@ Public Sub RunStepwiseRegression()
         Exit Sub
     End If
 
-    pEnter = 0.05
-    pRemove = 0.1
+    v = Application.InputBox("Criterion for entering and removing variables:" & vbLf & _
+        "  1 = t Stat (|t| threshold)" & vbLf & _
+        "  2 = P-value", APP_TITLE, CRIT_T, Type:=1)
+    If VarType(v) = vbBoolean Then Exit Sub
+    crit = CLng(v)
+    If crit <> CRIT_T And crit <> CRIT_P Then
+        MsgBox "Enter 1 or 2.", vbExclamation, APP_TITLE
+        Exit Sub
+    End If
+    DefaultThresholds crit, enterVal, removeVal
+
     If method <> METHOD_BACKWARD Then
-        v = Application.InputBox("P-value to enter (a candidate enters when its p-value is below this):", _
-            APP_TITLE, pEnter, Type:=1)
-        If VarType(v) = vbBoolean Then Exit Sub
-        pEnter = CDbl(v)
-        If pEnter <= 0 Or pEnter >= 1 Then
-            MsgBox "P-value to enter must be between 0 and 1.", vbExclamation, APP_TITLE
-            Exit Sub
+        If crit = CRIT_T Then
+            v = Application.InputBox("|t| to enter (a candidate enters when its |t Stat| is at least this):", _
+                APP_TITLE, enterVal, Type:=1)
+        Else
+            v = Application.InputBox("P-value to enter (a candidate enters when its p-value is below this):", _
+                APP_TITLE, enterVal, Type:=1)
         End If
+        If VarType(v) = vbBoolean Then Exit Sub
+        enterVal = CDbl(v)
     End If
     If method <> METHOD_FORWARD Then
-        v = Application.InputBox("P-value to remove (a term is dropped when its p-value is above this):", _
-            APP_TITLE, IIf(method = METHOD_BACKWARD, pRemove, Application.WorksheetFunction.Max(pRemove, pEnter)), Type:=1)
-        If VarType(v) = vbBoolean Then Exit Sub
-        pRemove = CDbl(v)
-        If pRemove <= 0 Or pRemove >= 1 Then
-            MsgBox "P-value to remove must be between 0 and 1.", vbExclamation, APP_TITLE
-            Exit Sub
+        If crit = CRIT_T Then
+            v = Application.InputBox("|t| to remove (a term is dropped when its |t Stat| is below this):", _
+                APP_TITLE, IIf(method = METHOD_STEPWISE, Application.WorksheetFunction.Min(removeVal, enterVal), removeVal), Type:=1)
+        Else
+            v = Application.InputBox("P-value to remove (a term is dropped when its p-value is above this):", _
+                APP_TITLE, IIf(method = METHOD_STEPWISE, Application.WorksheetFunction.Max(removeVal, enterVal), removeVal), Type:=1)
         End If
+        If VarType(v) = vbBoolean Then Exit Sub
+        removeVal = CDbl(v)
     End If
-    If method = METHOD_STEPWISE And pEnter > pRemove Then
-        MsgBox "P-value to enter must not exceed p-value to remove, otherwise a variable can cycle in and out.", _
-            vbExclamation, APP_TITLE
+    msg = CheckThresholds(method, crit, enterVal, removeVal)
+    If Len(msg) > 0 Then
+        MsgBox msg, vbExclamation, APP_TITLE
         Exit Sub
     End If
 
@@ -185,14 +205,14 @@ Public Sub RunStepwiseRegression()
         MsgBox msg, vbExclamation, APP_TITLE
         Exit Sub
     End If
-    If Not RunSelection(ds, method, pEnter, pRemove, inModel, sl, msg) Then
+    If Not RunSelection(ds, method, crit, enterVal, removeVal, inModel, sl, msg) Then
         MsgBox msg, vbExclamation, APP_TITLE
         Exit Sub
     End If
 
     On Error GoTo WriteFailed
     Application.ScreenUpdating = False
-    WriteReport ds, method, pEnter, pRemove, inModel, sl, dropped, yRng, xRng
+    WriteReport ds, method, crit, enterVal, removeVal, inModel, sl, dropped, yRng, xRng
     Application.ScreenUpdating = True
     Exit Sub
 
@@ -205,21 +225,25 @@ End Sub
 ' Worksheet function
 '------------------------------------------------------------------------------
 Public Function STEPREG(known_y As Range, known_x As Range, Optional method As Long = 3, _
-        Optional p_enter As Double = 0.05, Optional p_remove As Double = 0.1, _
+        Optional criterion As Long = 1, Optional enter_threshold As Variant, Optional remove_threshold As Variant, _
         Optional has_labels As Boolean = False) As Variant
     Dim ds As DataSet, inModel() As Boolean, sl As StepLog, f As FitResult
     Dim dropped As Long, msg As String, outArr() As Variant, i As Long, a As Range
+    Dim enterVal As Double, removeVal As Double
 
     On Error GoTo Fail
     If method < 1 Or method > 3 Then GoTo Fail
-    If p_enter <= 0 Or p_enter >= 1 Or p_remove <= 0 Or p_remove >= 1 Then GoTo Fail
-    If method = METHOD_STEPWISE And p_enter > p_remove Then GoTo Fail
+    If criterion <> CRIT_T And criterion <> CRIT_P Then GoTo Fail
+    DefaultThresholds criterion, enterVal, removeVal
+    If Not IsMissing(enter_threshold) Then enterVal = CDbl(enter_threshold)
+    If Not IsMissing(remove_threshold) Then removeVal = CDbl(remove_threshold)
+    If Len(CheckThresholds(method, criterion, enterVal, removeVal)) > 0 Then GoTo Fail
     If known_y.Areas.Count > 1 Or known_y.Columns.Count <> 1 Then GoTo Fail
     For Each a In known_x.Areas
         If a.Rows.Count <> known_y.Rows.Count Then GoTo Fail
     Next a
     If Not BuildDataSet(known_y, known_x, has_labels, ds, dropped, msg) Then GoTo Fail
-    If Not RunSelection(ds, method, p_enter, p_remove, inModel, sl, msg) Then GoTo Fail
+    If Not RunSelection(ds, method, criterion, enterVal, removeVal, inModel, sl, msg) Then GoTo Fail
 
     f = FitCurrent(ds, inModel)
     ReDim outArr(1 To f.p + 2, 1 To 5)
@@ -240,6 +264,44 @@ Public Function STEPREG(known_y As Range, known_x As Range, Optional method As L
 
 Fail:
     STEPREG = CVErr(xlErrValue)
+End Function
+
+'------------------------------------------------------------------------------
+' Criteria
+'------------------------------------------------------------------------------
+Private Sub DefaultThresholds(crit As Long, enterVal As Double, removeVal As Double)
+    If crit = CRIT_T Then
+        enterVal = 2
+        removeVal = 2
+    Else
+        enterVal = 0.05
+        removeVal = 0.1
+    End If
+End Sub
+
+' Returns an error message, or "" when the thresholds are usable
+Private Function CheckThresholds(method As Long, crit As Long, enterVal As Double, removeVal As Double) As String
+    If crit = CRIT_T Then
+        If enterVal <= 0 Or removeVal <= 0 Then
+            CheckThresholds = "|t| thresholds must be greater than 0."
+        ElseIf method = METHOD_STEPWISE And enterVal < removeVal Then
+            CheckThresholds = "|t| to enter must be at least |t| to remove, otherwise a variable can cycle in and out."
+        End If
+    Else
+        If enterVal <= 0 Or enterVal >= 1 Or removeVal <= 0 Or removeVal >= 1 Then
+            CheckThresholds = "P-value thresholds must be between 0 and 1."
+        ElseIf method = METHOD_STEPWISE And enterVal > removeVal Then
+            CheckThresholds = "P-value to enter must not exceed p-value to remove, otherwise a variable can cycle in and out."
+        End If
+    End If
+End Function
+
+Private Function EnterOK(crit As Long, t As Double, pv As Double, enterVal As Double) As Boolean
+    If crit = CRIT_T Then EnterOK = (t >= enterVal) Else EnterOK = (pv < enterVal)
+End Function
+
+Private Function RemoveOK(crit As Long, t As Double, pv As Double, removeVal As Double) As Boolean
+    If crit = CRIT_T Then RemoveOK = (t < removeVal) Else RemoveOK = (pv > removeVal)
 End Function
 
 '------------------------------------------------------------------------------
@@ -398,8 +460,8 @@ End Function
 '------------------------------------------------------------------------------
 ' Selection procedure
 '------------------------------------------------------------------------------
-Private Function RunSelection(ds As DataSet, method As Long, pEnter As Double, pRemove As Double, _
-        inModel() As Boolean, sl As StepLog, msg As String) As Boolean
+Private Function RunSelection(ds As DataSet, method As Long, crit As Long, enterVal As Double, _
+        removeVal As Double, inModel() As Boolean, sl As StepLog, msg As String) As Boolean
     Dim j As Long, changed As Boolean, guard As Long, f As FitResult
 
     ReDim inModel(1 To ds.k)
@@ -421,19 +483,19 @@ Private Function RunSelection(ds As DataSet, method As Long, pEnter As Double, p
                 "or perfectly collinear. Remove the redundant columns or use forward or stepwise."
             Exit Function
         End If
-        LogStep ds, sl, "Start", "(all candidates)", -1, f
+        LogStep ds, sl, "Start", "(all candidates)", 0, -1, f
     Else
         f = FitCurrent(ds, inModel)
-        LogStep ds, sl, "Start", "(intercept only)", -1, f
+        LogStep ds, sl, "Start", "(intercept only)", 0, -1, f
     End If
 
     Do
         changed = False
         If method <> METHOD_BACKWARD Then
-            If TryEnter(ds, inModel, pEnter, sl) Then changed = True
+            If TryEnter(ds, inModel, crit, enterVal, sl) Then changed = True
         End If
         If method <> METHOD_FORWARD Then
-            Do While TryRemove(ds, inModel, pRemove, sl)
+            Do While TryRemove(ds, inModel, crit, removeVal, sl)
                 changed = True
                 guard = guard + 1
                 If guard > MAX_STEPS Then Exit Do
@@ -446,7 +508,8 @@ Private Function RunSelection(ds As DataSet, method As Long, pEnter As Double, p
     RunSelection = True
 End Function
 
-Private Function TryEnter(ds As DataSet, inModel() As Boolean, pEnter As Double, sl As StepLog) As Boolean
+Private Function TryEnter(ds As DataSet, inModel() As Boolean, crit As Long, enterVal As Double, _
+        sl As StepLog) As Boolean
     Dim j As Long, best As Long, bestT As Double, t As Double, pos As Long
     Dim f As FitResult, bestFit As FitResult, pv As Double
 
@@ -473,14 +536,15 @@ Private Function TryEnter(ds As DataSet, inModel() As Boolean, pEnter As Double,
 
     pos = PositionOf(bestFit, best)
     pv = PValueT(bestFit.coef(pos), bestFit.se(pos), bestFit.dfe)
-    If pv < pEnter Then
+    If EnterOK(crit, bestT, pv, enterVal) Then
         inModel(best) = True
-        LogStep ds, sl, "Entered", ds.xNames(best), pv, bestFit
+        LogStep ds, sl, "Entered", ds.xNames(best), TStat(bestFit.coef(pos), bestFit.se(pos)), pv, bestFit
         TryEnter = True
     End If
 End Function
 
-Private Function TryRemove(ds As DataSet, inModel() As Boolean, pRemove As Double, sl As StepLog) As Boolean
+Private Function TryRemove(ds As DataSet, inModel() As Boolean, crit As Long, removeVal As Double, _
+        sl As StepLog) As Boolean
     Dim f As FitResult, i As Long, worst As Long, worstT As Double, t As Double, pv As Double
     Dim removed As Long, afterFit As FitResult
 
@@ -496,11 +560,11 @@ Private Function TryRemove(ds As DataSet, inModel() As Boolean, pRemove As Doubl
         End If
     Next i
     pv = PValueT(f.coef(worst), f.se(worst), f.dfe)
-    If pv > pRemove Then
+    If RemoveOK(crit, worstT, pv, removeVal) Then
         removed = f.vars(worst)
         inModel(removed) = False
         afterFit = FitCurrent(ds, inModel)
-        LogStep ds, sl, "Removed", ds.xNames(removed), pv, afterFit
+        LogStep ds, sl, "Removed", ds.xNames(removed), TStat(f.coef(worst), f.se(worst)), pv, afterFit
         TryRemove = True
     End If
 End Function
@@ -516,12 +580,13 @@ Private Function PositionOf(f As FitResult, varIndex As Long) As Long
 End Function
 
 Private Sub LogStep(ds As DataSet, sl As StepLog, action As String, varName As String, _
-        pv As Double, f As FitResult)
+        tv As Double, pv As Double, f As FitResult)
     Dim i As Long
     sl.nSteps = sl.nSteps + 1
     i = sl.nSteps
     ReDim Preserve sl.action(1 To i)
     ReDim Preserve sl.varName(1 To i)
+    ReDim Preserve sl.tValue(1 To i)
     ReDim Preserve sl.pValue(1 To i)
     ReDim Preserve sl.nVars(1 To i)
     ReDim Preserve sl.r2(1 To i)
@@ -531,6 +596,7 @@ Private Sub LogStep(ds As DataSet, sl As StepLog, action As String, varName As S
     ReDim Preserve sl.bic(1 To i)
     sl.action(i) = action
     sl.varName(i) = varName
+    sl.tValue(i) = tv
     sl.pValue(i) = pv
     sl.nVars(i) = f.p
     sl.r2(i) = 1 - f.sse / ds.syy
@@ -689,7 +755,7 @@ End Function
 '------------------------------------------------------------------------------
 ' Report
 '------------------------------------------------------------------------------
-Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove As Double, _
+Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As Double, removeVal As Double, _
         inModel() As Boolean, sl As StepLog, dropped As Long, yRng As Range, xRng As Range)
     Dim wb As Workbook, ws As Worksheet, f As FitResult
     Dim r As Long, i As Long, j As Long, tCrit As Double, ssr As Double
@@ -717,8 +783,15 @@ Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove
     r = r + 2
     PutPair ws, r, "Dependent variable", ds.yName
     PutPair ws, r, "Method", methodName
-    If method <> METHOD_BACKWARD Then PutPair ws, r, "P-value to enter", pEnter
-    If method <> METHOD_FORWARD Then PutPair ws, r, "P-value to remove", pRemove
+    If crit = CRIT_T Then
+        PutPair ws, r, "Criterion", "t Stat"
+        If method <> METHOD_BACKWARD Then PutPair ws, r, "|t| to enter", enterVal
+        If method <> METHOD_FORWARD Then PutPair ws, r, "|t| to remove", removeVal
+    Else
+        PutPair ws, r, "Criterion", "P-value"
+        If method <> METHOD_BACKWARD Then PutPair ws, r, "P-value to enter", enterVal
+        If method <> METHOD_FORWARD Then PutPair ws, r, "P-value to remove", removeVal
+    End If
     PutPair ws, r, "Observations used", ds.n
     PutPair ws, r, "Rows excluded (blank or non-numeric)", dropped
     PutPair ws, r, "Y range", yRng.Address(External:=True)
@@ -730,19 +803,22 @@ Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove
 
     ' Step history
     r = r + 1
-    PutHeader ws, r, Array("Step", "Action", "Variable", "P-value", "Terms in model", _
-        "R Square", "Adjusted R Square", "Standard Error", "AIC", "BIC"), "Selection steps"
+    PutHeader ws, r, Array("Step", "Action", "Variable", "t Stat", "P-value", "Terms in model", _
+        "R Square", "Adjusted R Square", "RMSE", "AIC", "BIC"), "Selection steps"
     For i = 1 To sl.nSteps
         ws.Cells(r, 1).Value = i - 1
         ws.Cells(r, 2).Value = sl.action(i)
         ws.Cells(r, 3).Value = sl.varName(i)
-        If sl.pValue(i) >= 0 Then ws.Cells(r, 4).Value = sl.pValue(i)
-        ws.Cells(r, 5).Value = sl.nVars(i)
-        ws.Cells(r, 6).Value = sl.r2(i)
-        ws.Cells(r, 7).Value = sl.adjR2(i)
-        ws.Cells(r, 8).Value = sl.s(i)
-        ws.Cells(r, 9).Value = sl.aic(i)
-        ws.Cells(r, 10).Value = sl.bic(i)
+        If sl.pValue(i) >= 0 Then
+            ws.Cells(r, 4).Value = sl.tValue(i)
+            ws.Cells(r, 5).Value = sl.pValue(i)
+        End If
+        ws.Cells(r, 6).Value = sl.nVars(i)
+        ws.Cells(r, 7).Value = sl.r2(i)
+        ws.Cells(r, 8).Value = sl.adjR2(i)
+        ws.Cells(r, 9).Value = sl.s(i)
+        ws.Cells(r, 10).Value = sl.aic(i)
+        ws.Cells(r, 11).Value = sl.bic(i)
         r = r + 1
     Next i
 
@@ -752,7 +828,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove
     PutPair ws, r, "Multiple R", Sqr(Application.WorksheetFunction.Max(0, 1 - f.sse / ds.syy))
     PutPair ws, r, "R Square", 1 - f.sse / ds.syy
     PutPair ws, r, "Adjusted R Square", 1 - (f.sse / f.dfe) / (ds.syy / (ds.n - 1))
-    PutPair ws, r, "Standard Error", Sqr(f.sse / f.dfe)
+    PutPair ws, r, "RMSE", Sqr(f.sse / f.dfe)
     PutPair ws, r, "Observations", ds.n
 
     ' ANOVA
@@ -800,7 +876,8 @@ Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove
     Next j
     If hasExcluded Then
         r = r + 1
-        PutHeader ws, r, Array("Variable", "P-value if entered next", "Note"), "Variables not in the final model"
+        PutHeader ws, r, Array("Variable", "t Stat if entered next", "P-value if entered next", "Note"), _
+            "Variables not in the final model"
         For j = 1 To ds.k
             If Not inModel(j) Then
                 ws.Cells(r, 1).Value = ds.xNames(j)
@@ -809,18 +886,19 @@ Private Sub WriteReport(ds As DataSet, method As Long, pEnter As Double, pRemove
                 inModel(j) = False
                 If trial.ok Then
                     pos = PositionOf(trial, j)
-                    ws.Cells(r, 2).Value = PValueT(trial.coef(pos), trial.se(pos), trial.dfe)
+                    ws.Cells(r, 2).Value = TStat(trial.coef(pos), trial.se(pos))
+                    ws.Cells(r, 3).Value = PValueT(trial.coef(pos), trial.se(pos), trial.dfe)
                 ElseIf ds.cxx(j, j) <= 0 Then
-                    ws.Cells(r, 3).Value = "Constant column"
+                    ws.Cells(r, 4).Value = "Constant column"
                 Else
-                    ws.Cells(r, 3).Value = "Collinear with terms in the model or too few rows"
+                    ws.Cells(r, 4).Value = "Collinear with terms in the model or too few rows"
                 End If
                 r = r + 1
             End If
         Next j
     End If
 
-    ws.Columns("A:J").AutoFit
+    ws.Columns("A:K").AutoFit
     ws.Columns("B").ColumnWidth = Application.WorksheetFunction.Max(ws.Columns("B").ColumnWidth, 14)
     ws.Activate
     ws.Range("A1").Select
