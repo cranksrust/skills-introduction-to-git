@@ -16,7 +16,7 @@ import reference_stepwise as ref
 ORANGE = "BF5700"
 TINT = "F8E5D6"
 GREY = "595959"
-CREDIT = "Built for the HOUMBA Class of '28"
+CREDIT = "HOUMBA Class of '28"
 FMT_P = '[<0.0001]"<0.0001";0.0000'
 FMT_T, FMT_R2, FMT_NUM, FMT_COEF = "0.00", "0.0000", "#,##0.00", "#,##0.0000"
 
@@ -29,7 +29,7 @@ def write_report(wb, ds, method, mname, sname):
     inm, log = ref.run(ds, method, ref.CRIT_T)
     ws = wb.create_sheet(sname)
     ws.sheet_view.showGridLines = False
-    r = [4]
+    r = [3]
 
     def put(row, col, v, fmt=None, **kw):
         c = ws.cell(row, col, v)
@@ -68,7 +68,6 @@ def write_report(wb, ds, method, mname, sname):
         cell.fill = PatternFill("solid", fgColor=ORANGE)
     put(1, 1, "  Stepwise Regression Output", bold=True, size=14, color="FFFFFF").alignment = Alignment(vertical="center")
     ws.row_dimensions[1].height = 26
-    put(2, 1, "  " + CREDIT, italic=True, size=9, color=ORANGE)
 
     section("Settings")
     pair("Dependent variable", "SALARY")

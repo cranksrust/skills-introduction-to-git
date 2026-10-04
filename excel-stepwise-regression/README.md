@@ -55,7 +55,7 @@ Right-click any cell and choose **Stepwise Regression...** (or **Alt+F8**, type 
 | Criterion | 1 t Stat (default), 2 P-value. |
 | Enter / remove thresholds | t Stat: enter when \|t\| >= 2.0, remove when \|t\| < 2.0. P-value: enter when p < 0.05, remove when p > 0.10. Stepwise requires \|t\| to enter >= \|t\| to remove (or p to enter <= p to remove). |
 
-The report goes on a new sheet named `Stepwise` in the data's workbook, styled in burnt orange (#BF5700) for the HOUMBA Class of '28. See `examples/report_preview.png`.
+The report goes on a new sheet named `Stepwise` in the data's workbook, styled in burnt orange (#BF5700), with a small HOUMBA Class of '28 credit in the footer. See `examples/report_preview.png`.
 
 - **Selection steps:** each entry or removal with its t Stat and p-value, plus R², adjusted R², RMSE, AIC and BIC after the step.
 - **Final model:** R, R², adjusted R², RMSE, ANOVA, and coefficients with standard errors, t, p and 95% intervals.

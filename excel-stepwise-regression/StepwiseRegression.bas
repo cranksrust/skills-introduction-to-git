@@ -24,8 +24,8 @@ Attribute VB_Name = "StepwiseRegression"
 '==============================================================================
 Option Explicit
 
-Private Const APP_TITLE As String = "Stepwise Regression | HOUMBA '28"
-Private Const CREDIT As String = "Built for the HOUMBA Class of '28"
+Private Const APP_TITLE As String = "Stepwise Regression"
+Private Const CREDIT As String = "HOUMBA Class of '28"
 
 ' Report colours (Long values of RGB(r, g, b); Const cannot call RGB)
 Private Const BURNT_ORANGE As Long = 22463      ' RGB(191, 87, 0)  #BF5700
@@ -791,7 +791,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     ssr = ds.syy - f.sse
     tCrit = Application.WorksheetFunction.TInv(0.05, f.dfe)
 
-    ' Title bar and credit
+    ' Title bar
     With ws.Range("A1:K1")
         .Interior.Color = BURNT_ORANGE
         .Font.Color = vbWhite
@@ -801,14 +801,7 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     End With
     ws.Rows(1).RowHeight = 26
     ws.Cells(1, 1).Value = "  Stepwise Regression Output"
-    With ws.Cells(2, 1)
-        .Value = "  " & CREDIT
-        .Font.Italic = True
-        .Font.Size = 9
-        .Font.Color = BURNT_ORANGE
-    End With
-
-    r = 4
+    r = 3
     PutSection ws, r, "Settings"
     PutPair ws, r, "Dependent variable", ds.yName
     PutPair ws, r, "Method", methodName
