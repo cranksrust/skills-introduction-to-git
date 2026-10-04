@@ -1,0 +1,115 @@
+:root {
+  --orange: #bf5700;
+  --orange-dark: #9a4600;
+  --tint: #f8e5d6;
+  --text: #242424;
+  --muted: #616161;
+  --border: #c8c8c8;
+  --bg: #ffffff;
+  --field-bg: #ffffff;
+  --error: #a4262c;
+  --ok: #107c10;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f0f0f0;
+    --muted: #b0b0b0;
+    --border: #5a5a5a;
+    --bg: #1f1f1f;
+    --field-bg: #2b2b2b;
+    --tint: #3a2a1e;
+    --error: #f1707b;
+    --ok: #6ccb5f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 13px/1.4 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.bar {
+  background: var(--orange);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 10px 14px;
+}
+
+main { padding: 12px 14px; flex: 1; }
+
+.field { margin-bottom: 12px; }
+.field > label, .two label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+.pick { display: flex; gap: 6px; }
+.pick input { flex: 1; min-width: 0; }
+
+input[type="text"], input[type="number"], select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+}
+input:focus, select:focus, button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 1px;
+}
+input:disabled { opacity: 0.5; }
+
+.hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+
+.check { display: flex; align-items: center; gap: 8px; }
+.check label { font-weight: 400; margin: 0; }
+.check input { accent-color: var(--orange); margin: 0; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+button {
+  font: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button.secondary {
+  white-space: nowrap;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--field-bg);
+  color: var(--text);
+}
+button.secondary:hover { border-color: var(--orange); }
+button.primary {
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: none;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 600;
+}
+button.primary:hover { background: var(--orange-dark); }
+button:disabled { opacity: 0.6; cursor: default; }
+
+#status { margin-top: 12px; min-height: 1.4em; }
+#status.error { color: var(--error); }
+#status.ok { color: var(--ok); }
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+footer a { color: var(--muted); }

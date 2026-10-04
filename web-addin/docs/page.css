@@ -1,0 +1,23 @@
+:root { --orange: #bf5700; --text: #242424; --muted: #5c5c5c; --bg: #ffffff; --rule: #e3e3e3; --code: #f4f4f4; }
+@media (prefers-color-scheme: dark) {
+  :root { --text: #ececec; --muted: #b4b4b4; --bg: #1b1b1b; --rule: #3a3a3a; --code: #2a2a2a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+header { background: var(--orange); color: #fff; padding: 18px 16px; }
+header .wrap { display: flex; align-items: center; gap: 12px; }
+header img { width: 40px; height: 40px; }
+header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+nav { border-bottom: 1px solid var(--rule); }
+nav .wrap { display: flex; gap: 18px; padding-top: 10px; padding-bottom: 10px; font-size: 14px; }
+nav a { color: var(--text); text-decoration: none; }
+nav a:hover { color: var(--orange); }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+main { padding: 8px 0 40px; }
+h2 { color: var(--orange); font-size: 19px; margin: 28px 0 8px; }
+h3 { font-size: 16px; margin: 18px 0 4px; }
+code { background: var(--code); padding: 1px 5px; border-radius: 3px; font-size: 14px; }
+a { color: var(--orange); }
+.button { display: inline-block; background: var(--orange); color: #fff; padding: 9px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; }
+footer { border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; padding: 14px 0 24px; }
+img.shot { max-width: 100%; border: 1px solid var(--rule); border-radius: 4px; }

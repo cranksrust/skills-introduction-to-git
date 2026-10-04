@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stepwise Regression Help</title>
+  <link rel="icon" href="assets/icon-32.png">
+  <link rel="stylesheet" href="page.css">
+</head>
+<body>
+  <header><div class="wrap"><img src="assets/icon-80.png" alt=""><h1>Stepwise Regression Help</h1></div></header>
+  <nav><div class="wrap"><a href="index.html">Install</a><a href="support.html">Help</a><a href="privacy.html">Privacy</a></div></nav>
+  <main class="wrap">
+    <h2>Running a regression</h2>
+    <ol>
+      <li>Click <strong>Stepwise Regression</strong> on the Home tab to open the panel.</li>
+      <li><strong>Y range:</strong> select the dependent variable column, including its label cell, and click <strong>Use selection</strong>.</li>
+      <li><strong>X range:</strong> select the candidate predictor columns. Hold Ctrl (Cmd on Mac) to add non-adjacent columns. Every column must cover the same rows as Y.</li>
+      <li>Leave <strong>First row contains labels</strong> ticked if your selections include headers.</li>
+      <li>Pick the method and criterion, adjust the thresholds if needed, and click <strong>Run regression</strong>.</li>
+    </ol>
+
+    <h2>Methods</h2>
+    <ul>
+      <li><strong>Forward selection:</strong> starts with no predictors and adds the strongest candidate while it meets the entry threshold.</li>
+      <li><strong>Backward elimination:</strong> starts with every predictor and drops the weakest while it fails the removal threshold.</li>
+      <li><strong>Stepwise:</strong> adds like forward selection, then rechecks every term in the model and drops any that no longer qualify. Repeats until nothing changes.</li>
+    </ul>
+
+    <h2>Criteria</h2>
+    <ul>
+      <li><strong>T-Stat</strong> (default): a variable enters when |T-Stat| is at least 2.00 and is removed when |T-Stat| falls below 2.00.</li>
+      <li><strong>P-value:</strong> a variable enters when its p-value is below 0.05 and is removed when it rises above 0.10.</li>
+    </ul>
+    <p>Both use the T-Stat of the variable's coefficient in the model being considered. For stepwise, the entry threshold must be at least as strict as the removal threshold, so a variable cannot cycle in and out.</p>
+
+    <h2>Reading the report</h2>
+    <ul>
+      <li><strong>Selection steps:</strong> each variable entered or removed, with its T-Stat and p-value, and the model's R Square, Adjusted R Square, RMSE, AIC and BIC after that step.</li>
+      <li><strong>Final model:</strong> Regression Statistics, ANOVA and coefficient tables in the same layout as Excel's Data Analysis &gt; Regression report. Standard Error of the regression is labeled RMSE.</li>
+      <li><strong>Variables not in the final model:</strong> the T-Stat and p-value each would have if it were added next.</li>
+    </ul>
+
+    <h2>Common problems</h2>
+    <h3>"Fewer than 3 complete numeric rows"</h3>
+    <p>Check that the ranges cover your data and that the labels setting matches. Rows with a blank, text or error value in Y or any X are skipped, and the report shows how many were skipped.</p>
+    <h3>"The model with every predictor cannot be estimated"</h3>
+    <p>Backward elimination needs every predictor in the first model. A constant column, or one that is an exact combination of others (for example a total and its parts), makes that impossible. Remove the redundant column or use forward or stepwise.</p>
+    <h3>The button is missing</h3>
+    <p>Reinstall the add-in from the store or the manifest file. In Excel for the web, add-ins uploaded from a file stay for that browser only.</p>
+
+    <h2>Contact</h2>
+    <p>Report a problem or suggest a change on the <a data-repo-link="/issues" href="#">project's issue page</a>.</p>
+  </main>
+  <footer><div class="wrap">HOUMBA Class of '28 &middot; <a data-repo-link="" href="#">Source code</a></div></footer>
+  <script src="nav.js"></script>
+</body>
+</html>

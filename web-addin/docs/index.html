@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stepwise Regression for Excel</title>
+  <link rel="icon" href="assets/icon-32.png">
+  <link rel="stylesheet" href="page.css">
+</head>
+<body>
+  <header><div class="wrap"><img src="assets/icon-80.png" alt=""><h1>Stepwise Regression for Excel</h1></div></header>
+  <nav><div class="wrap"><a href="index.html">Install</a><a href="support.html">Help</a><a href="privacy.html">Privacy</a></div></nav>
+  <main class="wrap">
+    <p>An Excel add-in that runs forward selection, backward elimination and stepwise regression, then writes a report in the same layout as Excel's Data Analysis &gt; Regression tool. It works in Excel for Windows, Mac and the web, and needs no macros.</p>
+
+    <h2>Install from the Office Add-ins store</h2>
+    <ol>
+      <li>In Excel, go to <strong>Home &gt; Add-ins</strong> (or <strong>Insert &gt; Get Add-ins</strong>).</li>
+      <li>Search for <strong>Stepwise Regression</strong> and click <strong>Add</strong>.</li>
+      <li>A <strong>Stepwise Regression</strong> button appears on the Home tab.</li>
+    </ol>
+
+    <h2>Install from the manifest file</h2>
+    <p>Use this before the store listing is live, or if the store is unavailable.</p>
+    <p><a class="button" href="manifest.xml" download>Download manifest.xml</a></p>
+    <h3>Excel for the web</h3>
+    <ol>
+      <li>Open a workbook at <a href="https://www.office.com/launch/excel">office.com</a>.</li>
+      <li>Go to <strong>Home &gt; Add-ins &gt; More Add-ins</strong>, open the <strong>My Add-ins</strong> tab, then <strong>Upload My Add-in</strong>.</li>
+      <li>Choose the downloaded <code>manifest.xml</code> and click <strong>Upload</strong>.</li>
+    </ol>
+    <h3>Excel for Mac</h3>
+    <ol>
+      <li>Quit Excel.</li>
+      <li>In Finder, press <strong>Cmd+Shift+G</strong> and go to <code>~/Library/Containers/com.microsoft.Excel/Data/Documents/wef</code> (create the <code>wef</code> folder if it is missing).</li>
+      <li>Copy <code>manifest.xml</code> into that folder and reopen Excel. The add-in is under <strong>Home &gt; Add-ins &gt; My Add-ins</strong>.</li>
+    </ol>
+    <h3>Excel for Windows</h3>
+    <p>Go to <strong>Home &gt; Add-ins &gt; More Add-ins &gt; My Add-ins</strong>. If <strong>Upload My Add-in</strong> is shown, use it as above. If not, use Excel for the web or install from the store.</p>
+
+    <h2>Use it</h2>
+    <ol>
+      <li>Click <strong>Stepwise Regression</strong> on the Home tab.</li>
+      <li>Select the Y column and click <strong>Use selection</strong>, then do the same for the X columns.</li>
+      <li>Choose the method and criterion and click <strong>Run regression</strong>. The report opens on a new sheet.</li>
+    </ol>
+    <p><img class="shot" src="assets/report-preview.png" alt="Example report showing selection steps, regression statistics, ANOVA and coefficients"></p>
+  </main>
+  <footer><div class="wrap">HOUMBA Class of '28 &middot; <a data-repo-link="" href="#">Source code</a></div></footer>
+  <script src="nav.js"></script>
+</body>
+</html>

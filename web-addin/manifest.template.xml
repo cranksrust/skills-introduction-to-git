@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>42dd67d1-0351-4755-b8dd-181abef578d6</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>McCombs HOUMBA Class of '28</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Stepwise Regression"/>
+  <Description DefaultValue="Forward, backward and stepwise regression with T-Stat or p-value criteria, reported in the layout of Excel's Data Analysis Regression tool."/>
+  <IconUrl DefaultValue="{{BASE_URL}}/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="{{BASE_URL}}/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="{{BASE_URL}}/support.html"/>
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.8">
+      <Set Name="ExcelApi" MinVersion="1.8"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{BASE_URL}}/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="Support.Url"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Stepwise.Group">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="Stepwise.OpenPane">
+                  <Label resid="Button.Label"/>
+                  <Supertip>
+                    <Title resid="Button.Label"/>
+                    <Description resid="Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>StepwisePane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="{{BASE_URL}}/assets/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="{{BASE_URL}}/assets/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="{{BASE_URL}}/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="{{BASE_URL}}/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="{{BASE_URL}}/taskpane.html"/>
+        <bt:Url id="Support.Url" DefaultValue="{{BASE_URL}}/support.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="Stepwise Regression is ready"/>
+        <bt:String id="Group.Label" DefaultValue="Stepwise"/>
+        <bt:String id="Button.Label" DefaultValue="Stepwise Regression"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Open it from the Stepwise Regression button on the Home tab."/>
+        <bt:String id="Button.Tooltip" DefaultValue="Run forward, backward or stepwise regression on the selected data."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

@@ -816,8 +816,8 @@ Private Sub WriteReport(ds As DataSet, method As Long, crit As Long, enterVal As
     End If
     PutPair ws, r, "Observations used", ds.n, "0"
     PutPair ws, r, "Rows excluded (blank or non-numeric)", dropped, "0"
-    PutPair ws, r, "Y range", yRng.Address(External:=True)
-    PutPair ws, r, "X range", xRng.Address(External:=True)
+    PutPair ws, r, "Y range", "'" & yRng.Address(External:=True)
+    PutPair ws, r, "X range", "'" & xRng.Address(External:=True)
     If sl.hitLimit Then
         PutPair ws, r, "Warning", "Stopped after " & MAX_STEPS & " iterations; the procedure was cycling."
         ws.Cells(r - 1, 2).Font.Color = RGB(192, 0, 0)
